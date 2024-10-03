@@ -1,0 +1,26 @@
+C:\Users\abcd\PycharmProjects\pythonProject\venv\Scripts\python.exe C:\Users\abcd\PycharmProjects\pythonProject\main.py 
+Traceback (most recent call last):
+  File "C:\Users\abcd\PycharmProjects\pythonProject\venv\lib\site-packages\requests\models.py", line 974, in json
+    return complexjson.loads(self.text, **kwargs)
+  File "C:\Program Files\Python39\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\Python39\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\Python39\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\abcd\PycharmProjects\pythonProject\main.py", line 94, in <module>
+    scan_ips_in_groups(excel_file_path, group_size=2)
+  File "C:\Users\abcd\PycharmProjects\pythonProject\main.py", line 73, in scan_ips_in_groups
+    scan_id = start_scan_group(ip_group)
+  File "C:\Users\abcd\PycharmProjects\pythonProject\main.py", line 37, in start_scan_group
+    scan_id = response.json().get('scan_id')
+  File "C:\Users\abcd\PycharmProjects\pythonProject\venv\lib\site-packages\requests\models.py", line 978, in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+Process finished with exit code 1

@@ -1,0 +1,93 @@
+import requests
+import json
+import time
+import pandas as pd
+
+# Burp Suite API details
+BURP_API_URL = 'http://127.0.0.1:8080/v0.1/scan'  # Adjust IP/Port as per your setup
+API_KEY = 'your_burp_api_key'           # Set if using API authentication
+HEADERS = {'Content-Type': 'application/json'}
+
+# Function to read IPs from an Excel file
+def read_ips_from_excel(file_path):
+    # Load the Excel file
+    df = pd.read_excel(file_path)
+    # Assuming the IPs are in a column named 'IPs', adjust if needed
+    return df['IPs'].tolist()
+
+# Function to start a scan for a group of IPs
+def start_scan_group(ip_group):
+    payload = {
+        "urls": [f'http://{ip}' for ip in ip_group],  # Create a list of URLs for this group
+        "application_logins": [],
+        "excluded_urls": [],
+        "user_agent": "Mozilla/5.0"
+    }
+
+    if API_KEY:
+        headers = {**HEADERS, 'Authorization': f'Bearer {API_KEY}'}
+    else:
+        headers = HEADERS
+
+    # Send the request to start the scan
+    response = requests.post(BURP_API_URL, headers=headers, data=json.dumps(payload))
+
+    if response.status_code == 200:
+        scan_id = response.json()['scan_id']
+        print(f'Started scan for group: {ip_group}, scan ID: {scan_id}')
+        return scan_id
+    else:
+        print(f'Failed to start scan for group {ip_group}, Status code: {response.status_code}, Response: {response.text}')
+        return None
+
+# Function to check the scan status
+def check_scan_status(scan_id):
+    scan_url = f'{BURP_API_URL}/{scan_id}'
+
+    if API_KEY:
+        headers = {**HEADERS, 'Authorization': f'Bearer {API_KEY}'}
+    else:
+        headers = HEADERS
+
+    # Request scan status
+    response = requests.get(scan_url, headers=headers)
+
+    if response.status_code == 200:
+        scan_status = response.json()['status']
+        return scan_status
+    else:
+        print(f'Failed to check scan status for scan ID {scan_id}, Status code: {response.status_code}')
+        return None
+
+# Main function to automate scanning of multiple IPs in groups
+def scan_ips_in_groups(file_path, group_size=5):
+    # Read the IPs from the Excel file
+    all_ips = read_ips_from_excel(file_path)
+
+    # Split the IPs into groups of `group_size`
+    for i in range(0, len(all_ips), group_size):
+        ip_group = all_ips[i:i + group_size]
+
+        # Start the scan for the current group
+        scan_id = start_scan_group(ip_group)
+
+        if scan_id:
+            print(f'Scanning group: {ip_group}, waiting for completion...')
+
+            # Loop until the scan completes for this group
+            while True:
+                status = check_scan_status(scan_id)
+
+                if status == 'completed':
+                    print(f'Scan completed for group: {ip_group}')
+                    break
+                else:
+                    print(f'Scan still in progress for group: {ip_group}, status: {status}')
+                    time.sleep(10)  # Wait before checking again
+
+if __name__ == '__main__':
+    # Path to the Excel file
+    excel_file_path = 'ips_to_scan.xlsx'
+
+    # Call the function to scan IPs in groups of 5
+    scan_ips_in_groups(excel_file_path, group_size=5)

@@ -1,0 +1,69 @@
+import requests
+import json
+import time
+
+# Burp Suite API details
+BURP_API_URL = 'http://127.0.0.1:8080'  # Adjust IP/Port as per your setup
+API_KEY = 'your_burp_api_key'           # Set if using API authentication
+HEADERS = {'Content-Type': 'application/json'}
+
+# List of IPs to scan
+target_ips = ['192.168.1.1', '192.168.1.2', '192.168.1.3']  # Add your IPs here
+
+# Function to add IPs to Burp's scope
+def add_to_scope(ip):
+    scope_url = f'{BURP_API_URL}/v0.1/target/scope'
+    payload = {
+        "urls": [f'http://{ip}']  # Specify the IP target
+    }
+    
+    if API_KEY:
+        headers = {**HEADERS, 'Authorization': f'Bearer {API_KEY}'}
+    else:
+        headers = HEADERS
+    
+    # Send the request to add IP to Burp scope
+    response = requests.post(scope_url, headers=headers, data=json.dumps(payload))
+    
+    if response.status_code == 200:
+        print(f'Added {ip} to Burp scope')
+        return True
+    else:
+        print(f'Failed to add {ip} to scope, Status code: {response.status_code}')
+        return False
+
+# Function to start an active scan for the IP in Burp
+def start_active_scan(ip):
+    scan_url = f'{BURP_API_URL}/v0.1/scan'
+    payload = {
+        "urls": [f'http://{ip}'],  # Specify the IP target
+        "application_logins": [],  # Set any login details if needed
+        "excluded_urls": [],       # Optionally exclude specific URLs
+        "user_agent": "Mozilla/5.0"  # Set user-agent if required
+    }
+    
+    if API_KEY:
+        headers = {**HEADERS, 'Authorization': f'Bearer {API_KEY}'}
+    else:
+        headers = HEADERS
+    
+    # Send the request to start the active scan
+    response = requests.post(scan_url, headers=headers, data=json.dumps(payload))
+    
+    if response.status_code == 200:
+        scan_id = response.json()['scan_id']
+        print(f'Started active scan for {ip}, scan ID: {scan_id}')
+        return scan_id
+    else:
+        print(f'Failed to start active scan for {ip}, Status code: {response.status_code}')
+        return None
+
+# Main function to automate scanning of multiple IPs
+def scan_multiple_ips():
+    for ip in target_ips:
+        if add_to_scope(ip):
+            print(f'Starting scan for {ip}...')
+            start_active_scan(ip)
+
+if __name__ == '__main__':
+    scan_multiple_ips()

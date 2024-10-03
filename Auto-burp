@@ -7,36 +7,14 @@ BURP_API_URL = 'http://127.0.0.1:8080'  # Adjust IP/Port as per your setup
 API_KEY = 'your_burp_api_key'           # Set if using API authentication
 HEADERS = {'Content-Type': 'application/json'}
 
-# List of IPs to scan
-target_ips = ['192.168.1.1', '192.168.1.2', '192.168.1.3']  # Add your IPs here
+# List of IPs or URLs to scan
+target_ips = ['192.168.1.1', '192.168.1.2', '192.168.1.3']  # Replace with your IPs/URLs
 
-# Function to add IPs to Burp's scope
-def add_to_scope(ip):
-    scope_url = f'{BURP_API_URL}/v0.1/target/scope'
+# Function to start a scan for the IP
+def start_scan(ip):
+    scan_url = f'{BURP_API_URL}/scan'
     payload = {
-        "urls": [f'http://{ip}']  # Specify the IP target
-    }
-    
-    if API_KEY:
-        headers = {**HEADERS, 'Authorization': f'Bearer {API_KEY}'}
-    else:
-        headers = HEADERS
-    
-    # Send the request to add IP to Burp scope
-    response = requests.post(scope_url, headers=headers, data=json.dumps(payload))
-    
-    if response.status_code == 200:
-        print(f'Added {ip} to Burp scope')
-        return True
-    else:
-        print(f'Failed to add {ip} to scope, Status code: {response.status_code}')
-        return False
-
-# Function to start an active scan for the IP in Burp
-def start_active_scan(ip):
-    scan_url = f'{BURP_API_URL}/v0.1/scan'
-    payload = {
-        "urls": [f'http://{ip}'],  # Specify the IP target
+        "urls": [f'http://{ip}'],  # Specify the IP/URL as the target
         "application_logins": [],  # Set any login details if needed
         "excluded_urls": [],       # Optionally exclude specific URLs
         "user_agent": "Mozilla/5.0"  # Set user-agent if required
@@ -47,23 +25,54 @@ def start_active_scan(ip):
     else:
         headers = HEADERS
     
-    # Send the request to start the active scan
+    # Send the request to start the scan
     response = requests.post(scan_url, headers=headers, data=json.dumps(payload))
     
     if response.status_code == 200:
         scan_id = response.json()['scan_id']
-        print(f'Started active scan for {ip}, scan ID: {scan_id}')
+        print(f'Started scan for {ip}, scan ID: {scan_id}')
         return scan_id
     else:
-        print(f'Failed to start active scan for {ip}, Status code: {response.status_code}')
+        print(f'Failed to start scan for {ip}, Status code: {response.status_code}, Response: {response.text}')
+        return None
+
+# Function to check the scan status
+def check_scan_status(scan_id):
+    scan_url = f'{BURP_API_URL}/scan/{scan_id}'
+    
+    if API_KEY:
+        headers = {**HEADERS, 'Authorization': f'Bearer {API_KEY}'}
+    else:
+        headers = HEADERS
+    
+    # Request scan status
+    response = requests.get(scan_url, headers=headers)
+    
+    if response.status_code == 200:
+        scan_status = response.json()['status']
+        return scan_status
+    else:
+        print(f'Failed to check scan status for scan ID {scan_id}, Status code: {response.status_code}')
         return None
 
 # Main function to automate scanning of multiple IPs
 def scan_multiple_ips():
     for ip in target_ips:
-        if add_to_scope(ip):
-            print(f'Starting scan for {ip}...')
-            start_active_scan(ip)
+        scan_id = start_scan(ip)
+        
+        if scan_id:
+            print(f'Scanning {ip}, waiting for completion...')
+            
+            # Loop until scan completes
+            while True:
+                status = check_scan_status(scan_id)
+                
+                if status == 'completed':
+                    print(f'Scan completed for {ip}')
+                    break
+                else:
+                    print(f'Scan still in progress for {ip}, status: {status}')
+                    time.sleep(10)  # Wait before checking again
 
 if __name__ == '__main__':
     scan_multiple_ips()
